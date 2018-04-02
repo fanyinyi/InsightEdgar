@@ -17,6 +17,7 @@ class Session:
         self.start_time = request.time
         self.end_time = request.time
         self.num_docs = 1
+        self.counter = 0
 
     def update(self, request):
         self.end_time = request.time
@@ -58,7 +59,7 @@ def kick_inactive_session(kick_ip, active_session, out_file):
     for ip in kick_ip:
         kick_sessions.append(active_session.pop(ip))
 
-    sorted(kick_sessions, key=lambda x: x.start_time)
+    kick_sessions.sort(key=lambda x: (x.start_time, x.end_time, x.counter))
 
     # write sessions to file
     for session in kick_sessions:
@@ -86,9 +87,10 @@ def process_stream(log_file, inactivity_period, out_file):
     next(log_file)
     current_time = datetime.datetime.min
     kick_schedule = {}
+    counter = 0
     for line in log_file:
         request = Request(line)
-
+        counter += 1
         # update current time
         if current_time != request.time:
             if current_time in kick_schedule:
@@ -99,6 +101,7 @@ def process_stream(log_file, inactivity_period, out_file):
         # process session from request
         if request.ip not in active_session:
             session = Session(request)
+            session.counter = counter
             active_session[request.ip] = session
         else:
             # get correct kick time
